@@ -21,9 +21,6 @@ jobs:
         run: pip install google-genai edge-tts moviepy
         
       - name: Avvia il Motore (Crea il Cartone)
-        env:
-          # Qui il maggiordomo apre la cassaforte e passa la chiave a Python
-          LA_MIA_CHIAVE: ${{ secrets.LA_MIA_CHIAVE }}
         run: python crea_cartone.py
         
       - name: Consegna il Video Finito
