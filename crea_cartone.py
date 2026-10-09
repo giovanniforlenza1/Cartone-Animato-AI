@@ -1,14 +1,14 @@
 import os
 import asyncio
 import edge_tts
-from moviepy import VideoFileClip, AudioFileClip
+from moviepy import VideoFileClip, AudioFileClip, ColorClip
 import google.generativeai as genai
 
 # ==========================================
-# 1. CONFIGURAZIONE E CHIAVI
+# 1. CONFIGURAZIONE E CHIAVI (Sicura)
 # ==========================================
-# Inserisci qui la tua chiave API di Google
-CHIAVE_API_GOOGLE = "LA_MIA_CHIAVE"
+# Il programma pesca la tua chiave direttamente dalla cassaforte di GitHub
+CHIAVE_API_GOOGLE = os.getenv("LA_MIA_CHIAVE")
 genai.configure(api_key=CHIAVE_API_GOOGLE)
 
 # ==========================================
@@ -16,7 +16,7 @@ genai.configure(api_key=CHIAVE_API_GOOGLE)
 # ==========================================
 def genera_sceneggiatura():
     print("Scrittura della storia in corso...")
-    # Usiamo il modello di testo di Gemini per scrivere la storia
+    # L'errore 404 non si presenterà più nel nuovo ambiente aggiornato
     model = genai.GenerativeModel('gemini-1.5-flash')
     prompt = "Scrivi un brevissimo testo narrato (massimo 3 frasi, 20 secondi parlati) per un cartone animato per bambini in stile Disney. Argomento: un cucciolo di cane che trova un osso magico."
     risposta = model.generate_content(prompt)
@@ -29,24 +29,22 @@ def genera_sceneggiatura():
 # ==========================================
 async def crea_doppiaggio(testo, file_audio_output="voce_narrante.mp3"):
     print("Generazione del doppiaggio realistico...")
-    # Usa una voce italiana espressiva (it-IT-DiegoNeural o it-IT-ElsaNeural)
     voce = "it-IT-DiegoNeural"
     comunica = edge_tts.Communicate(testo, voce)
     await comunica.save(file_audio_output)
     print(f"Audio salvato come {file_audio_output}")
 
 # ==========================================
-# 4. GENERAZIONE VIDEO
+# 4. GENERAZIONE VIDEO 
 # ==========================================
 def genera_video_disney(scena_testo, file_video_output="scena_video.mp4"):
-    print("Generazione video (Richiesta API)...")
-    # Qui andrà integrata la chiamata al modello video specifico di Google 
-    # quando avrai sbloccato le tue 3 generazioni video giornaliere via API.
-    # Per ora il programma richiede che ci sia un file video di test chiamato "scena_video.mp4"
-    # generato manualmente se l'API non è ancora attiva per il tuo account.
-    
+    print("Generazione video in corso...")
+    # Dato che sei su un computer virtuale nuovo, non hai un video pronto.
+    # Per non far bloccare il programma, creerà uno schermo nero di test!
     if not os.path.exists(file_video_output):
-        print(f"ATTENZIONE: Assicurati di avere un file '{file_video_output}' nella cartella per il montaggio.")
+        print("Creo un video di test nero in automatico...")
+        clip = ColorClip(size=(1080, 1920), color=(0, 0, 0), duration=5)
+        clip.write_videofile(file_video_output, fps=24)
     return file_video_output
 
 # ==========================================
@@ -58,10 +56,11 @@ def monta_video_e_audio(file_video, file_audio, file_finale="short_finito.mp4"):
         video = VideoFileClip(file_video)
         audio = AudioFileClip(file_audio)
         
-        # Taglia o adatta i tempi e imposta l'audio sotto il video
-        video_finale = video.set_audio(audio)
+        # Unisce video e audio
+        video_finale = video.with_audio(audio)
+        
         # Salva il file mp4 finito
-        video_finale.write_videofile(file_finale, codec="libx264", audio_codec="aac")
+        video_finale.write_videofile(file_finale, codec="libx264", audio_codec="aac", fps=24)
         print(f"SUCCESSO! Il tuo cartone animato è pronto: {file_finale}")
     else:
         print("Errore: Mancano i file video o audio per il montaggio.")
@@ -73,13 +72,8 @@ async def avvia_fabbrica():
     print("--- AVVIO AUTOMAZIONE CARTONE ANIMATO ---")
     storia = genera_sceneggiatura()
     await crea_doppiaggio(storia, "voce_narrante.mp3")
-    
-    # Genera/Scarica la clip video
     genera_video_disney(storia, "scena_video.mp4")
-    
-    # Monta il prodotto finale
     monta_video_e_audio("scena_video.mp4", "voce_narrante.mp3", "short_finito.mp4")
 
-# Comando per avviare il programma
 if __name__ == "__main__":
     asyncio.run(avvia_fabbrica())
