@@ -44,7 +44,7 @@ def genera_video_animato(prompt_video, file_video_output="scena_video.mp4"):
     
     try:
         # Usiamo il token per autenticarci su un potente server video gratuito
-        client = Client("damo-vilab/modelscope-text-to-video-synthesis", hf_token=token_hf) 
+        client = Client("damo-vilab/modelscope-text-to-video-synthesis", token=token_hf) 
         
         result = client.predict(
             prompt_video,
