@@ -1,0 +1,33 @@
+name: Fabbrica Automatica Cartoni
+on:
+  schedule:
+    # Questo comando dice di avviarsi tutti i giorni alle 8:00 del mattino (orario UTC)
+    - cron: '0 8 * * *'
+  workflow_dispatch: # Questo ti permette di avere anche un comodo tasto "Play" per avviarlo manualmente quando vuoi tu
+
+jobs:
+  prepara_video:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scarica i nostri file
+        uses: actions/checkout@v4
+      
+      - name: Installa Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          
+      - name: Installa gli attrezzi (Librerie)
+        run: pip install google-generativeai edge-tts moviepy
+        
+      - name: Avvia il Motore (Crea il Cartone)
+        env:
+          # Qui il maggiordomo apre la cassaforte e passa la chiave a Python
+          LA_MIA_CHIAVE: ${{ secrets.LA_MIA_CHIAVE }}
+        run: python crea_cartone.py
+        
+      - name: Consegna il Video Finito
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-cartone-di-oggi
+          path: short_finito.mp4
