@@ -18,7 +18,7 @@ jobs:
           python-version: '3.10'
           
       - name: Installa gli attrezzi (Librerie)
-        run: pip install google-genai edge-tts moviepy
+        run: pip install gradio_client edge-tts moviepy
         
       - name: Avvia il Motore (Crea il Cartone)
         run: python crea_cartone.py
