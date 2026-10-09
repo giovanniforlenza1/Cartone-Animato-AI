@@ -38,28 +38,26 @@ async def crea_doppiaggio(testo_italiano, file_audio_output="voce_narrante.mp3")
 # ==========================================
 def genera_video_animato(prompt_video, file_video_output="scena_video.mp4"):
     print("Connessione ai server di Hugging Face per l'animazione video...")
-    print("NOTA: Questo passaggio può richiedere 5-15 minuti per via delle code pubbliche.")
     
-    # Ci colleghiamo a uno "Space" pubblico che usa modelli video avanzati
-    client = Client("multimodalart/zeroscope-v2") 
+    # Preleviamo il pass gratuito dalla cassaforte
+    token_hf = os.getenv("HF_TOKEN")
     
     try:
-        # Inviamo il comando ai server pubblici
+        # Usiamo il token per autenticarci su un potente server video gratuito
+        client = Client("damo-vilab/modelscope-text-to-video-synthesis", hf_token=token_hf) 
+        
         result = client.predict(
             prompt_video,
-            "low quality, distorted, bad animation", # Prompt negativo (cose da evitare)
+            "low quality, bad animation, deformed", # Cose che non vogliamo vedere
             api_name="/infer"
         )
-        # Il server ci restituisce il percorso del video generato
-        percorso_scaricato = result[0]
         
-        # Rinominiamo e spostiamo il video nella nostra cartella
+        percorso_scaricato = result[0]
         os.rename(percorso_scaricato, file_video_output)
         print("Video animato scaricato con successo!")
         
     except Exception as e:
         print(f"Errore durante la generazione video: {e}")
-        print("Il server pubblico potrebbe essere troppo occupato. Riproverà domani.")
 
 # ==========================================
 # 4. MONTAGGIO FINALE (MOVIEPY)
