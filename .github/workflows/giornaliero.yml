@@ -21,6 +21,8 @@ jobs:
         run: pip install gradio_client edge-tts moviepy
         
       - name: Avvia il Motore (Crea il Cartone)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: python crea_cartone.py
         
       - name: Consegna il Video Finito
