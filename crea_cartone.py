@@ -1,54 +1,71 @@
 import os
 import asyncio
-import urllib.parse
-import urllib.request
+import json
 import edge_tts
 from moviepy import VideoFileClip, AudioFileClip
+from google import genai
 from gradio_client import Client
 
 # ==========================================
-# 1. GENERAZIONE STORIA (POLLINATIONS)
+# 1. CONFIGURAZIONE CHIAVI
 # ==========================================
-def genera_sceneggiatura():
-    print("Scrittura della sceneggiatura...")
-    prompt = "Scrivi in inglese un breve prompt descrittivo (massimo 15 parole) per generare un video 3D stile Disney Pixar di un cucciolo di cane felice che corre in un prato."
-    url = "https://text.pollinations.ai/prompt/" + urllib.parse.quote(prompt)
-    
-    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-    with urllib.request.urlopen(req) as response:
-        testo_storia = response.read().decode('utf-8').strip()
-        
-    print("Prompt Video Generato:\n", testo_storia)
-    return testo_storia
+CHIAVE_API_GOOGLE = os.getenv("LA_MIA_CHIAVE")
+TOKEN_HF = os.getenv("HF_TOKEN")
+
+client_gemini = genai.Client(api_key=CHIAVE_API_GOOGLE)
 
 # ==========================================
-# 2. GENERAZIONE DOPPIAGGIO (EDGE TTS)
+# 2. SHOWRUNNER AI (GEMINI)
 # ==========================================
-async def crea_doppiaggio(testo_italiano, file_audio_output="voce_narrante.mp3"):
-    print("Generazione voce in corso...")
-    # Qui impostiamo la battuta che dirà il personaggio in italiano
-    battuta = "Evviva! Che bella giornata per correre nel prato!"
-    voce = "it-IT-DiegoNeural"
-    comunica = edge_tts.Communicate(battuta, voce)
+def genera_episodio():
+    print("Gemini sta scrivendo il nuovo episodio di Pip...")
+    prompt_showrunner = """You are the showrunner of a 3D Pixar-style educational animated series for preschoolers. 
+The main character is Pip, a cute and extremely fluffy red panda wearing a small yellow scarf. 
+Pip explores the world and learns how to manage emotions (like frustration, fear, or excitement) with a gentle, positive approach. 
+Write a new 15-second episode for today. 
+Output ONLY a valid JSON object with two keys:
+"narration": "A short, sweet voiceover script (max 20 words) in English.",
+"video_prompt": "A highly detailed prompt (max 20 words) for a text-to-video AI model, describing Pip in 3D Pixar style doing the action, continuous smooth shot, bright colors."
+Do not add any markdown formatting, just the raw JSON."""
+
+    response = client_gemini.models.generate_content(
+        model='gemini-1.5-flash',
+        contents=prompt_showrunner
+    )
+    
+    # Pulizia del testo per assicurarsi che Python legga bene il formato JSON
+    testo_pulito = response.text.strip().replace('```json', '').replace('```', '')
+    dati_episodio = json.loads(testo_pulito)
+    
+    print("Sceneggiatura generata:")
+    print("- Voce narrante:", dati_episodio["narration"])
+    print("- Direzione video:", dati_episodio["video_prompt"])
+    
+    return dati_episodio
+
+# ==========================================
+# 3. GENERAZIONE DOPPIAGGIO (EDGE TTS)
+# ==========================================
+async def crea_doppiaggio(testo_inglese, file_audio_output="voce_narrante.mp3"):
+    print("Registrazione della voce in corso (Inglese)...")
+    # Voce femminile dolce e rassicurante (nativa americana)
+    voce = "en-US-AnaNeural" 
+    comunica = edge_tts.Communicate(testo_inglese, voce)
     await comunica.save(file_audio_output)
     print(f"Audio salvato come {file_audio_output}")
 
 # ==========================================
-# 3. GENERAZIONE VIDEO PRO (HUGGING FACE)
+# 4. GENERAZIONE VIDEO PRO (HUGGING FACE)
 # ==========================================
 def genera_video_animato(prompt_video, file_video_output="scena_video.mp4"):
-    print("Connessione ai server di Hugging Face per l'animazione video...")
-    
-    # Preleviamo il pass gratuito dalla cassaforte
-    token_hf = os.getenv("HF_TOKEN")
-    
+    print("Richiesta video ai server Hugging Face (ModelScope)...")
     try:
-        # Usiamo il token per autenticarci su un potente server video gratuito
-        client = Client("damo-vilab/modelscope-text-to-video-synthesis", token=token_hf) 
+        # Abbiamo corretto il parametro in "token="
+        client_hf = Client("damo-vilab/modelscope-text-to-video-synthesis", token=TOKEN_HF) 
         
-        result = client.predict(
+        result = client_hf.predict(
             prompt_video,
-            "low quality, bad animation, deformed", # Cose che non vogliamo vedere
+            "low quality, distorted, bad animation, text, watermark, bad proportions", # Prompt negativo
             api_name="/infer"
         )
         
@@ -60,27 +77,35 @@ def genera_video_animato(prompt_video, file_video_output="scena_video.mp4"):
         print(f"Errore durante la generazione video: {e}")
 
 # ==========================================
-# 4. MONTAGGIO FINALE (MOVIEPY)
+# 5. MONTAGGIO FINALE (MOVIEPY)
 # ==========================================
 def monta_video_e_audio(file_video, file_audio, file_finale="short_finito.mp4"):
-    print("Montaggio video in corso...")
+    print("Montaggio finale in corso...")
     if os.path.exists(file_video) and os.path.exists(file_audio):
         video = VideoFileClip(file_video)
         audio = AudioFileClip(file_audio)
         
-        # Uniamo i due file
+        # Sovrappone l'audio al video generato
         video_finale = video.with_audio(audio)
         video_finale.write_videofile(file_finale, codec="libx264", audio_codec="aac", fps=24)
-        print(f"SUCCESSO! Il tuo cartone animato PRO è pronto: {file_finale}")
+        print(f"SUCCESSO! L'episodio di Pip è pronto: {file_finale}")
 
 # ==========================================
-# IL NUOVO "MOTORE" PRO
+# IL MOTORE CENTRALE
 # ==========================================
 async def avvia_fabbrica():
-    print("--- AVVIO FABBRICA CARTONI ANIMATI PRO ---")
-    prompt_inglese = genera_sceneggiatura()
-    await crea_doppiaggio(prompt_inglese, "voce_narrante.mp3")
-    genera_video_animato(prompt_inglese, "scena_video.mp4")
+    print("--- AVVIO FABBRICA: PIP IL PANDA MINORE ---")
+    
+    # 1. Gemini inventa la puntata
+    episodio = genera_episodio()
+    
+    # 2. Creiamo l'audio in inglese
+    await crea_doppiaggio(episodio["narration"], "voce_narrante.mp3")
+    
+    # 3. Creiamo il video 3D
+    genera_video_animato(episodio["video_prompt"], "scena_video.mp4")
+    
+    # 4. Montiamo il tutto
     monta_video_e_audio("scena_video.mp4", "voce_narrante.mp3", "short_finito.mp4")
 
 if __name__ == "__main__":
