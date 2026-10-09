@@ -1,32 +1,28 @@
 import os
 import asyncio
-import base64
+import urllib.parse
+import urllib.request
 import edge_tts
-from moviepy import VideoFileClip, AudioFileClip
-from google import genai
+from moviepy import ImageClip, AudioFileClip
 
 # ==========================================
-# 1. CONFIGURAZIONE E CHIAVI 
-# ==========================================
-CHIAVE_API_GOOGLE = os.getenv("LA_MIA_CHIAVE")
-client = genai.Client(api_key=CHIAVE_API_GOOGLE)
-
-# ==========================================
-# 2. GENERAZIONE STORIA (TESTO)
+# 1. GENERAZIONE TESTO (POLLINATIONS AI)
 # ==========================================
 def genera_sceneggiatura():
-    print("Scrittura della storia in corso...")
-    # Usiamo il metodo corretto per la generazione di testo con il nuovo client
-    response = client.models.generate_content(
-        model='gemini-1.5-flash',
-        contents="Scrivi un brevissimo testo narrato (massimo 3 frasi, 20 secondi parlati) per un cartone animato per bambini in stile Disney. Argomento: un cucciolo di cane che trova un osso magico."
-    )
-    testo_storia = response.text.strip()
+    print("Scrittura della storia in corso (senza API Key)...")
+    prompt = "Scrivi 3 brevi frasi in italiano per un cartone animato per bambini. Protagonista: un tenero cucciolo di cane esploratore."
+    url = "https://text.pollinations.ai/prompt/" + urllib.parse.quote(prompt)
+    
+    # Richiesta diretta al server gratuito
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    with urllib.request.urlopen(req) as response:
+        testo_storia = response.read().decode('utf-8').strip()
+        
     print("Storia generata:\n", testo_storia)
     return testo_storia
 
 # ==========================================
-# 3. GENERAZIONE DOPPIAGGIO (EDGE TTS)
+# 2. GENERAZIONE DOPPIAGGIO (EDGE TTS)
 # ==========================================
 async def crea_doppiaggio(testo, file_audio_output="voce_narrante.mp3"):
     print("Generazione del doppiaggio realistico...")
@@ -36,32 +32,35 @@ async def crea_doppiaggio(testo, file_audio_output="voce_narrante.mp3"):
     print(f"Audio salvato come {file_audio_output}")
 
 # ==========================================
-# 4. GENERAZIONE VIDEO OMNI
+# 3. GENERAZIONE IMMAGINE (POLLINATIONS AI)
 # ==========================================
-def genera_video_disney(scena_testo, file_video_output="scena_video.mp4"):
-    print("Generazione video con Gemini Omni in corso...")
-    prompt_video = f"Continuous smooth shot. 3D animation Disney Pixar style, vibrant colors. {scena_testo}"
+def genera_immagine_disney(file_immagine_output="scena.jpg"):
+    print("Generazione dell'illustrazione in corso...")
+    # Puoi cambiare questo prompt per variare le scene!
+    prompt_immagine = "3D animation Disney Pixar style, vibrant colors, a cute happy puppy exploring a magical forest, vertical format"
+    url = "https://image.pollinations.ai/prompt/" + urllib.parse.quote(prompt_immagine) + "?width=1080&height=1920&nologo=true"
     
-    interaction = client.interactions.create(
-        model="gemini-omni-1.1-flash",
-        input=prompt_video
-    )
-    
-    with open(file_video_output, "wb") as f:
-        f.write(base64.b64decode(interaction.output_video.data))
-        
-    return file_video_output
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    with urllib.request.urlopen(req) as response:
+        with open(file_immagine_output, "wb") as f:
+            f.write(response.read())
+            
+    print("Immagine scaricata!")
+    return file_immagine_output
 
 # ==========================================
-# 5. MONTAGGIO FINALE (MOVIEPY)
+# 4. MONTAGGIO FINALE (MOVIEPY)
 # ==========================================
-def monta_video_e_audio(file_video, file_audio, file_finale="short_finito.mp4"):
+def monta_video_e_audio(file_immagine, file_audio, file_finale="short_finito.mp4"):
     print("Montaggio video in corso...")
-    if os.path.exists(file_video) and os.path.exists(file_audio):
-        video = VideoFileClip(file_video)
+    if os.path.exists(file_immagine) and os.path.exists(file_audio):
         audio = AudioFileClip(file_audio)
         
+        # Trasforma l'immagine in un video lungo esattamente quanto l'audio
+        video = ImageClip(file_immagine).with_duration(audio.duration)
         video_finale = video.with_audio(audio)
+        
+        # Esporta il file mp4
         video_finale.write_videofile(file_finale, codec="libx264", audio_codec="aac", fps=24)
         print(f"SUCCESSO! Il tuo cartone animato è pronto: {file_finale}")
 
@@ -69,11 +68,11 @@ def monta_video_e_audio(file_video, file_audio, file_finale="short_finito.mp4"):
 # IL "MOTORE"
 # ==========================================
 async def avvia_fabbrica():
-    print("--- AVVIO AUTOMAZIONE CARTONE ANIMATO ---")
+    print("--- AVVIO AUTOMAZIONE CARTONE ANIMATO (FREE TIER) ---")
     storia = genera_sceneggiatura()
     await crea_doppiaggio(storia, "voce_narrante.mp3")
-    genera_video_disney(storia, "scena_video.mp4")
-    monta_video_e_audio("scena_video.mp4", "voce_narrante.mp3", "short_finito.mp4")
+    genera_immagine_disney("scena.jpg")
+    monta_video_e_audio("scena.jpg", "voce_narrante.mp3", "short_finito.mp4")
 
 if __name__ == "__main__":
     asyncio.run(avvia_fabbrica())
