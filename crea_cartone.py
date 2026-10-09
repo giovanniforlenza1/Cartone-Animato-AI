@@ -62,7 +62,7 @@ async def crea_doppiaggio(testo_inglese, file_audio_output="voce_narrante.mp3"):
 def genera_video_animato(prompt_video, file_video_output="scena_video.mp4"):
     print("Richiesta video ai server Hugging Face (ModelScope)...")
     try:
-        client_hf = Client("damo-vilab/modelscope-text-to-video-synthesis", token=TOKEN_HF) 
+        client_hf = Client("multimodalart/zeroscope-v2", token=TOKEN_HF) 
         
         result = client_hf.predict(
             prompt_video,
