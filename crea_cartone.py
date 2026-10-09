@@ -17,7 +17,7 @@ genai.configure(api_key=CHIAVE_API_GOOGLE)
 def genera_sceneggiatura():
     print("Scrittura della storia in corso...")
     # L'errore 404 non si presenterà più nel nuovo ambiente aggiornato
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-pro')
     prompt = "Scrivi un brevissimo testo narrato (massimo 3 frasi, 20 secondi parlati) per un cartone animato per bambini in stile Disney. Argomento: un cucciolo di cane che trova un osso magico."
     risposta = model.generate_content(prompt)
     testo_storia = risposta.text.strip()
